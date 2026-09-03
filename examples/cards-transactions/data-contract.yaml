@@ -1,0 +1,242 @@
+# Worked example generated from /knowledge.
+# Fictional institution ("Reference Bank UAE"). Not a real institution's data.
+# Template: knowledge/pm-artifacts/data-contract-template.md
+# Domain source: knowledge/banking-domains/cards-and-transaction-data.md
+
+id: cards.card_transactions.settled
+version: 1.0.0
+
+owner:
+  domain: cards
+  accountable: Head of Cards Analytics
+  on_call: cards-data-oncall@reference.example   # routes to a live rota, not an alias
+  steward: Cards Data Steward
+
+# --- Scope decision -------------------------------------------------------
+# Settlement-based, not authorisation-based. Accepts T+3 latency in exchange
+# for a figure that reconciles to the scheme settlement files and to finance.
+# Authorisation volume lives in cards.card_authorisations.stream and MUST NOT
+# be unioned with this table (double-counting failure mode).
+# Source: knowledge/banking-domains/cards-and-transaction-data.md
+description: >
+  Settled card transactions for issued consumer and business cards, sourced
+  from Visa BASE II and Mastercard IPM clearing files and reconciled to the
+  core banking posting. One row per settled transaction leg.
+
+schema:
+  format: iceberg
+  write_mode: copy-on-write        # daily batch, read-heavy; MoR not justified
+  partition_by: [business_date]    # finance/IFRS-aligned, not switch timestamp
+  sort_by: [card_token, transaction_timestamp_utc]
+  primary_key: [transaction_id]
+  columns:
+    - name: transaction_id
+      type: string
+      nullable: false
+      description: Scheme transaction identifier, unique per settled leg.
+    - name: card_token
+      type: string
+      nullable: false
+      description: >
+        Deterministic, format-preserving token issued at ingest. Raw PAN
+        never lands in S3. Determinism is required: sort_by and all per-card
+        aggregation depend on one card yielding one stable token. Accepts
+        that equality leaks, so the token is treated as PCI-Token, not as
+        anonymised. Source:
+        knowledge/aws-data-stack/tokenisation-and-encryption.md
+    - name: account_id
+      type: string
+      nullable: false
+    - name: customer_party_id
+      type: string
+      nullable: false
+      description: Core banking party ID. One party per customer across cards.
+    - name: business_date
+      type: date
+      nullable: false
+      description: Core banking accounting date for the posting.
+    - name: transaction_timestamp_utc
+      type: timestamp
+      nullable: false
+      description: >
+        Switch event time in UTC. Converted from GST at ingest; consumers
+        must not assume local time (timezone drift failure mode).
+    - name: posting_timestamp_gst
+      type: timestamp
+      nullable: false
+    - name: transaction_type
+      type: string
+      nullable: false
+      description: purchase | refund | cash_advance | fee
+    - name: settled_amount
+      type: decimal(18,3)
+      nullable: false
+      description: >
+        Signed. decimal(18,3) not (18,2) because KWD, BHD and OMR carry three
+        minor units and appear in GCC cross-border volume.
+    - name: settled_currency
+      type: string
+      nullable: false
+      description: ISO 4217 alpha-3.
+    - name: aed_equivalent_amount
+      type: decimal(18,2)
+      nullable: false
+    - name: fx_rate_used
+      type: decimal(18,8)
+      nullable: false
+      description: >
+        Rate applied at conversion. Stored so AED totals are reproducible for
+        a prior date. Source:
+        knowledge/banking-domains/core-banking-and-payments-data.md
+    - name: mcc
+      type: string
+      nullable: false
+      description: Four-digit merchant category code as supplied by acquirer.
+    - name: merchant_id
+      type: string
+      nullable: false
+    - name: merchant_descriptor_raw
+      type: string
+      nullable: false
+      description: Free text from the acquirer. Scanned for PAN at ingest.
+    - name: merchant_name_canonical
+      type: string
+      nullable: true
+      description: >
+        Null until the merchant resolution ruleset matches. Nullable by
+        design; consumers must handle null rather than assume coverage.
+    - name: merchant_country
+      type: string
+      nullable: false
+    - name: scheme
+      type: string
+      nullable: false
+      description: VISA or MASTERCARD.
+    - name: auth_id
+      type: string
+      nullable: true
+      description: >
+        Link to the originating authorisation. Null where the scheme did not
+        supply a match; do not treat null as unauthorised.
+    - name: is_partial_clearing
+      type: boolean
+      nullable: false
+    - name: interchange_amount
+      type: decimal(18,3)
+      nullable: false
+    - name: settlement_file_id
+      type: string
+      nullable: false
+      description: Source clearing file, for reconciliation to scheme totals.
+    - name: ingested_at
+      type: timestamp
+      nullable: false
+
+quality:
+  engine: aws_glue_data_quality      # DQDL; explainable to an auditor
+  on_failure: quarantine_and_alert   # publish clean rows, quarantine the rest
+  block_publication_if: [uniqueness_transaction_id, pan_leak_scan]
+  rules:
+    - name: uniqueness_transaction_id
+      dqdl: Uniqueness "transaction_id" = 1.0
+    - name: completeness_keys
+      dqdl: >
+        Completeness "transaction_id" = 1.0 and Completeness "card_token" = 1.0
+        and Completeness "customer_party_id" = 1.0
+        and Completeness "business_date" = 1.0
+    - name: pan_leak_scan
+      dqdl: ColumnValues "merchant_descriptor_raw" not matches "[0-9]{13,19}"
+      note: >
+        Prevents PAN reaching S3 and Athena query logs via free text. Source:
+        knowledge/banking-domains/cards-and-transaction-data.md
+    - name: currency_domain
+      dqdl: >
+        ColumnValues "settled_currency" in
+        ["AED","USD","EUR","GBP","SAR","KWD","BHD","OMR","QAR","INR"]
+    - name: mcc_format
+      dqdl: ColumnValues "mcc" matches "^[0-9]{4}$"
+    - name: fx_reconciles
+      dqdl: >
+        CustomSql "select count(*) from primary where
+        abs(aed_equivalent_amount - settled_amount * fx_rate_used) > 0.01" = 0
+    - name: volume_lower_bound
+      dqdl: RowCount > 400000
+      note: >
+        Absolute floor, not a trailing-mean band. Catches the zero-row and
+        partial-file cases that percentage bands pass during volume shifts.
+        Source: knowledge/data-product-practice/data-contracts.md
+    - name: volume_band
+      severity: warn
+      dqdl: RowCount between 700000 and 2200000
+      note: >
+        ASSUMPTION - band to be set from 24 months of history including
+        Ramadan, Eid and DSF peaks. Warn only; breaches are investigated,
+        not blocked.
+    - name: scheme_total_reconciliation
+      dqdl: >
+        CustomSql "select 1 where abs((select sum(settled_amount) from primary)
+        - (select file_total from cards.settlement_file_control
+        where file_id = :file_id)) < 1.00"
+      note: Ties the table to the scheme file total, not only to itself.
+
+sla:
+  freshness:
+    measured_from: settlement_file_cycle_date   # source event time, NOT job finish
+    commitment: >
+      All settled legs for business date D published by 06:00 GST on D+3.
+    target_percent: 99.5        # roughly one permitted miss per quarter
+  availability:
+    query_success_target_percent: 99.9
+  volume:
+    expected_daily_rows: 1200000   # ASSUMPTION - see PRD cost section
+  incident:
+    breach_notification_minutes: 30
+    channel: "#cards-data-incidents"
+
+classification:
+  regime_note: >
+    Onshore entity only. DIFC-booked card portfolios are OUT of scope for
+    v1.0.0 and must not be unioned into this table. Source:
+    knowledge/uae-regulatory/difc-adgm-data-residency.md
+  entity_of_origin: reference-bank-onshore
+  region: me-central-1
+  default_for_new_columns: PII-Review   # fails closed, not open
+  columns:
+    card_token: PCI-Token
+    customer_party_id: PII-Restricted
+    account_id: PII-Restricted
+    merchant_descriptor_raw: PII-Review
+    settled_amount: Confidential
+    aed_equivalent_amount: Confidential
+    interchange_amount: Confidential
+    mcc: Internal
+    merchant_country: Internal
+    business_date: Internal
+  lf_tags:
+    Confidentiality: [PCI-Token, PII-Restricted, Confidential, Internal]
+
+distribution:
+  format: iceberg
+  catalog: glue
+  access: lake_formation_grants
+  consumers:
+    - team: Cards Analytics
+      access: full
+      use: portfolio spend reporting, MCC mix
+    - team: Finance - Cards
+      access: full
+      use: interchange and settlement reconciliation
+    - team: Financial Crime
+      access: [card_token, customer_party_id, business_date, settled_amount, mcc, merchant_country]
+      use: transaction monitoring feed
+    - team: Retail Analytics (self-serve)
+      access: masked
+      masked_columns: [card_token, customer_party_id, account_id]
+      use: segment-level spend analysis
+
+version_policy:
+  scheme: semver
+  additive_changes: Minor bump. No consumer action required.
+  breaking_changes: >
+    Major bump with a 30-day dual run of v1 and v2 before v1 is deprecated.
+  deprecation_notice_days: 30

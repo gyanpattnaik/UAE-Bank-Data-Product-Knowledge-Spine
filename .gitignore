@@ -1,0 +1,10 @@
+# Unrelated working files that live in this directory
+claude-legacy-memory.md
+preview-screenshot.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
