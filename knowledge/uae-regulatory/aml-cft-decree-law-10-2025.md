@@ -34,9 +34,10 @@ operational detail. Reporting to the FIU is made through goAML.
 - Coverage evidence generated automatically vs assembled per examination:
   automated daily reconciliation costs build effort and answers the
   examiner in minutes, manual assembly costs weeks each time.
-- Model documentation depth for ML scoring: full model risk documentation
-  is expensive and is what a supervisor expects for automated decisioning,
-  a lighter approach is faster and invites a finding. [VERIFY]
+- Model documentation depth for ML scoring: agree the standard with your
+  supervisor before building, since the law sets no depth. Full model risk
+  documentation is expensive and defensible, a lighter approach is faster
+  and invites a finding you will not see coming until examination.
 
 ## Failure modes
 - Controls still mapped to the repealed 2018 law — an examiner asks for the

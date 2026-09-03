@@ -17,8 +17,8 @@ operational, with the TDRA acting as contact point.
   further months where onerous, so you must locate one customer's data
   across S3, Redshift and backups inside that.
 - Cross-border transfer rules constrain where analytics and SaaS
-  observability tools run, and the adequacy list that would clarify this
-  awaits the Data Office. [VERIFY]
+  observability run, and no adequacy list has been published, since that
+  sits with a Data Office not yet fully operational.
 
 ## Decisions a PM actually makes
 - Consent vs another lawful basis for analytics: consent is clean to
@@ -30,8 +30,8 @@ operational, with the TDRA acting as contact point.
   joins, retaining them keeps flexibility and puts the raw zone in scope
   for every rights request.
 - Hard delete vs crypto-shredding: Iceberg row deletes plus compaction
-  genuinely remove data at real compute cost, per-customer key destruction
-  is fast and requires your auditor to accept it.
+  genuinely remove data at real cost, per-customer key destruction is fast
+  and requires your auditor to accept it.
 - Retention by regulatory maximum vs purpose minimum: keeping everything
   for the five-year AML floor is simple and sits against data minimisation.
 - Build to GDPR parity now vs to the bare UAE text: parity is defensible
@@ -42,8 +42,8 @@ operational, with the TDRA acting as contact point.
 - Erasure applied to the serving layer only — the customer is gone from
   Redshift, remains in the raw zone and in months of Athena results, and a
   rights audit finds them.
-- No purpose registry — a team reuses a dataset collected for servicing
-  and nobody can state the basis when challenged.
+- No purpose registry — a team reuses a servicing dataset and nobody can
+  state the basis when challenged.
 - PII in logs — masking implemented in tables but not in application logs
   retained for 90 days.
 

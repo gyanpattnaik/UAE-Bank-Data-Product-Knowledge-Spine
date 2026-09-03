@@ -1,8 +1,9 @@
 # Sources — uae-regulatory
 
 Provenance for the regulatory claims in this folder. Verified 3 September
-2026. Re-check before relying on any of it: this area moves, and one law in
-this folder was replaced between the first draft and this verification pass.
+2026; no `[VERIFY]` markers remain. Re-check before relying on any of it:
+this area moves, and between the first draft and this verification pass one
+law in this folder had been repealed and one circular replaced.
 
 Not a knowledge file — exempt from the five-section shape and word cap.
 
@@ -39,23 +40,37 @@ unissued. Treated as unissued. Recheck before any external claim.
 
 ## Open Finance — `cbuae-open-finance.md`
 
-- Open Finance Regulation issued as Circular 7 of 2023, updated by Circular
-  3 of 2025, effective 10 July 2025. Nebras Open Finance LLC is the CBUAE
-  subsidiary operating the API hub; Al Etihad Payments is a separate CBUAE
-  subsidiary (Aani, Jaywan). Al Tareq covers consent, authentication and
-  payment initiation. Phase one covers banks including foreign branches,
-  and insurance companies.
-  - [Pinsent Masons](https://www.pinsentmasons.com/out-law/guides/uae-open-finance),
-    [Clifford Chance Q&A](https://www.cliffordchance.com/content/dam/cliffordchance/briefings/2024/05/uae-open-finance-regulation.pdf),
-    [CBUAE Rulebook — Open Finance Regulation](https://rulebook.centralbank.ae/en/rulebook/open-finance-regulation)
+- Circular C 03/2025, issued 10 July 2025, Status: In-Force, repealed and
+  replaced Circular C 7/2023 (which had been effective 15 April 2024).
+  Nebras Open Finance LLC is the CBUAE subsidiary operating the API hub;
+  Al Etihad Payments is a separate CBUAE subsidiary (Aani, Jaywan). Phase
+  one covers banks including branches of foreign banks, and insurance
+  companies (national and foreign branches).
+  - Read directly from the CBUAE Rulebook, current consolidated text at
+    [entiresection/6128](https://rulebook.centralbank.ae/en/entiresection/6128);
+    superseded C 7/2023 at
+    [entiresection/5640](https://rulebook.centralbank.ae/en/entiresection/5640).
+    Secondary: [Pinsent Masons](https://www.pinsentmasons.com/out-law/guides/uae-open-finance)
+- **Consent, recurring transactions:** consent must specify the period for
+  which it is valid, "up to a maximum period of twelve (12) months", and be
+  withdrawable by the User at any time and for any reason upon notice;
+  withdrawal must be "at least as simple, quick and easy as the process of
+  giving consent" and does not affect the lawfulness of prior processing.
+  Quoted from the in-force C 03/2025 text at entiresection/6128.
+- **Availability:** the Regulation states no numeric uptime, response-time
+  or rate-limit obligation on licensees. It requires an IT and cyber risk
+  management framework covering "reliability, robustness, stability and
+  availability", and the API Hub provides reporting on service performance,
+  availability and adoption KPIs. Binding figures, if any, sit in the Open
+  Finance Standards, not the Regulation.
 
 **Correction made.** An earlier draft said Al Etihad Payments operates the
-Open Finance platform "branded Nebras". Wrong: they are two separate CBUAE
-subsidiaries.
+Open Finance platform "branded Nebras". Wrong: two separate CBUAE
+subsidiaries. A later draft said C 7/2023 was "updated by" C 03/2025; it
+was repealed and replaced.
 
-**Still unverified.** Consent expiry maximum and re-consent cadence; API
-availability and rate-limit obligations on licensees. The CBUAE Rulebook
-pages return 403 to automated fetches — read them in a browser.
+**Note.** rulebook.centralbank.ae returns 403 to automated fetches. These
+provisions were read in a browser session on 3 September 2026.
 
 ## DIFC / ADGM — `difc-adgm-data-residency.md`
 
